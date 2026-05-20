@@ -1,0 +1,295 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { Header } from '@/components/dashboard/Header';
+import { StatsCards } from '@/components/dashboard/StatsCards';
+import { NavTabs, type Tab } from '@/components/dashboard/NavTabs';
+import { QueueList } from '@/components/queue/QueueList';
+import { CourtsList } from '@/components/courts/CourtsList';
+import { MatchHistory } from '@/components/matches/MatchHistory';
+import { PlayersList } from '@/components/players/PlayersList';
+import { Analytics } from '@/components/analytics/Analytics';
+import { PlayerModal } from '@/components/players/PlayerModal';
+import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay';
+import { Card } from '@/components/ui/card';
+import { useSocket } from '@/hooks/useSocket';
+import { useQueue, useCourts, usePlayers, useMatches, useStats } from '@/hooks/useData';
+import type { Player, Gender, Rank, MatchCategory } from '@/types';
+
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('queue');
+  const [dark, setDark] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [playerModalOpen, setPlayerModalOpen] = useState(false);
+  const [editPlayer, setEditPlayer] = useState<Player | null>(null);
+  const [matchmakingLoading, setMatchmakingLoading] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const { queue, loading: queueLoading, refresh: refreshQueue } = useQueue();
+  const { courts, loading: courtsLoading, refresh: refreshCourts } = useCourts();
+  const { players, loading: playersLoading, refresh: refreshPlayers } = usePlayers();
+  const { matches, total: matchTotal, loading: matchesLoading, refresh: refreshMatches } = useMatches();
+  const stats = useStats(queue, courts);
+
+  // Dark mode
+  useEffect(() => {
+    const stored = localStorage.getItem('dark');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = stored ? stored === 'true' : prefersDark;
+    setDark(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
+  }, []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem('dark', String(next));
+    document.documentElement.classList.toggle('dark', next);
+  };
+
+  // Initial data load
+  useEffect(() => {
+    refreshQueue();
+    refreshCourts();
+    refreshPlayers();
+    refreshMatches(1);
+  }, []);
+
+  // Socket.IO real-time updates
+  useSocket({
+    'queue:update': () => { refreshQueue(); refreshPlayers(); },
+    'court:update': () => refreshCourts(),
+    'match:created': () => { refreshQueue(); refreshCourts(); refreshPlayers(); refreshMatches(1); },
+    'match:ended': () => { refreshCourts(); refreshPlayers(); refreshMatches(1); },
+    'player:update': () => refreshPlayers(),
+    'stats:update': () => { refreshQueue(); refreshCourts(); },
+  });
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Matchmaking
+  const handleRunMatchmaking = async () => {
+    setMatchmakingLoading(true);
+    try {
+      const res = await fetch('/api/matchmaking', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast(data.message);
+    } catch (e: any) {
+      showToast(e.message ?? 'Matchmaking failed', 'error');
+    } finally {
+      setMatchmakingLoading(false);
+    }
+  };
+
+  // Queue actions
+  const handleRemoveFromQueue = async (playerId: string) => {
+    await fetch(`/api/queue/${playerId}`, { method: 'DELETE' });
+    refreshQueue();
+    refreshPlayers();
+  };
+
+  const handleJoinQueue = async (playerId: string) => {
+    const res = await fetch('/api/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      showToast(d.error, 'error');
+    } else {
+      showToast('Player added to queue');
+      refreshQueue();
+      refreshPlayers();
+    }
+  };
+
+  // Player modal submit
+  const handlePlayerSubmit = async (data: {
+    name: string;
+    gender: Gender;
+    rank: Rank;
+    preferredCategories: MatchCategory[];
+  }) => {
+    if (editPlayer) {
+      // Update existing
+      const res = await fetch(`/api/players/${editPlayer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      showToast('Player updated');
+      refreshPlayers();
+    } else {
+      // Register new and join queue
+      const res = await fetch('/api/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      showToast('Player registered and added to queue');
+      refreshQueue();
+      refreshPlayers();
+    }
+    setEditPlayer(null);
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    setEditPlayer(player);
+    setPlayerModalOpen(true);
+  };
+
+  const handleAddPlayer = () => {
+    setEditPlayer(null);
+    setPlayerModalOpen(true);
+  };
+
+  const handleTogglePause = async (player: Player) => {
+    const newStatus = player.status === 'Paused' ? 'Offline' : 'Paused';
+    await fetch(`/api/players/${player.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    refreshPlayers();
+  };
+
+  const handleDeactivate = async (playerId: string) => {
+    await fetch(`/api/players/${playerId}`, { method: 'DELETE' });
+    refreshQueue();
+    refreshPlayers();
+  };
+
+  // Court actions
+  const handleEndMatch = async (matchId: string, winningTeam: number | null) => {
+    const res = await fetch(`/api/matches/${matchId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'end', winningTeam }),
+    });
+    if (!res.ok) {
+      showToast('Failed to end match', 'error');
+    } else {
+      showToast('Match ended');
+      refreshCourts();
+      refreshPlayers();
+      refreshMatches(1);
+    }
+  };
+
+  const handleAddCourt = async (name: string) => {
+    const res = await fetch('/api/courts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      showToast(d.error, 'error');
+    } else {
+      showToast(`${name} added`);
+      refreshCourts();
+    }
+  };
+
+  const handleRemoveCourt = async (courtId: string) => {
+    const res = await fetch(`/api/courts/${courtId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json();
+      showToast(d.error, 'error');
+    } else {
+      showToast('Court removed');
+      refreshCourts();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header dark={dark} onToggleDark={toggleDark} onShowQR={() => setQrOpen(true)} />
+
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <StatsCards stats={stats} />
+
+        <NavTabs active={activeTab} onChange={setActiveTab} />
+
+        <Card className="p-6">
+          {activeTab === 'queue' && (
+            <QueueList
+              queue={queue}
+              loading={queueLoading}
+              onAddPlayer={handleAddPlayer}
+              onRunMatchmaking={handleRunMatchmaking}
+              onRemoveFromQueue={handleRemoveFromQueue}
+              matchmakingLoading={matchmakingLoading}
+            />
+          )}
+
+          {activeTab === 'courts' && (
+            <CourtsList
+              courts={courts}
+              onEndMatch={handleEndMatch}
+              onRunMatchmaking={handleRunMatchmaking}
+              onAddCourt={handleAddCourt}
+              onRemoveCourt={handleRemoveCourt}
+              matchmakingLoading={matchmakingLoading}
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <MatchHistory
+              matches={matches}
+              total={matchTotal}
+              loading={matchesLoading}
+              onLoadMore={refreshMatches}
+            />
+          )}
+
+          {activeTab === 'players' && (
+            <PlayersList
+              players={players.filter(p => p.active)}
+              loading={playersLoading}
+              onAddPlayer={handleAddPlayer}
+              onEditPlayer={handleEditPlayer}
+              onJoinQueue={handleJoinQueue}
+              onLeaveQueue={handleRemoveFromQueue}
+              onTogglePause={handleTogglePause}
+              onDeactivate={handleDeactivate}
+            />
+          )}
+
+          {activeTab === 'analytics' && <Analytics />}
+        </Card>
+      </main>
+
+      {/* Modals */}
+      <PlayerModal
+        open={playerModalOpen}
+        onClose={() => { setPlayerModalOpen(false); setEditPlayer(null); }}
+        onSubmit={handlePlayerSubmit}
+        initial={editPlayer}
+        title={editPlayer ? 'Edit Player' : 'Register Player'}
+      />
+
+      <QRCodeDisplay open={qrOpen} onClose={() => setQrOpen(false)} />
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-slide-up ${
+            toast.type === 'success'
+              ? 'bg-brand-500 text-white'
+              : 'bg-red-500 text-white'
+          }`}
+        >
+          {toast.type === 'success' ? '✓' : '✕'} {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
