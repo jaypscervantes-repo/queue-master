@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: queue-master
+    env: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npx prisma db push --accept-data-loss && npm run build
+    startCommand: npm start
+    healthCheckPath: /admin
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
