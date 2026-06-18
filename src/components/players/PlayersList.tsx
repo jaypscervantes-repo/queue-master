@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, UserPlus, Edit, Trash2, LogIn, LogOut, Pause, Play } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, LogIn, DoorOpen, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RankBadge, StatusBadge, CategoryBadge } from '@/components/ui/badge';
 import type { Player } from '@/types';
@@ -12,8 +12,7 @@ interface PlayersListProps {
   onAddPlayer: () => void;
   onEditPlayer: (player: Player) => void;
   onJoinQueue: (playerId: string) => void;
-  onLeaveQueue: (playerId: string) => void;
-  onTogglePause: (player: Player) => void;
+  onLeaveForTheDay: (player: Player) => void;
   onDeactivate: (playerId: string) => void;
 }
 
@@ -23,8 +22,7 @@ export function PlayersList({
   onAddPlayer,
   onEditPlayer,
   onJoinQueue,
-  onLeaveQueue,
-  onTogglePause,
+  onLeaveForTheDay,
   onDeactivate,
 }: PlayersListProps) {
   const [search, setSearch] = useState('');
@@ -100,7 +98,20 @@ export function PlayersList({
                   </td>
                   <td className="px-4 py-3 text-center hidden sm:table-cell text-gray-600 dark:text-gray-400">{player.gamesPlayed}</td>
                   <td className="px-4 py-3 text-center hidden sm:table-cell text-gray-600 dark:text-gray-400">{player.totalWins}</td>
-                  <td className="px-4 py-3"><StatusBadge status={player.status} /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={player.status} />
+                      {player.status === 'Playing' && !player.autoRequeue && (
+                        <span
+                          title="Will go Offline when this match ends"
+                          className="inline-flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 font-medium"
+                        >
+                          <Clock size={11} />
+                          Leaving
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -111,7 +122,7 @@ export function PlayersList({
                         <Edit size={14} />
                       </button>
 
-                      {player.status === 'Offline' || player.status === 'Paused' ? (
+                      {(player.status === 'Offline' || player.status === 'Paused') && (
                         <button
                           onClick={() => onJoinQueue(player.id)}
                           className="p-1.5 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 text-gray-400 hover:text-brand-600 transition-colors"
@@ -119,23 +130,20 @@ export function PlayersList({
                         >
                           <LogIn size={14} />
                         </button>
-                      ) : player.status === 'Queued' ? (
-                        <button
-                          onClick={() => onLeaveQueue(player.id)}
-                          className="p-1.5 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-900/20 text-gray-400 hover:text-yellow-600 transition-colors"
-                          title="Remove from Queue"
-                        >
-                          <LogOut size={14} />
-                        </button>
-                      ) : null}
+                      )}
 
-                      {player.status !== 'Playing' && (
+                      {(player.status === 'Queued' ||
+                        (player.status === 'Playing' && player.autoRequeue)) && (
                         <button
-                          onClick={() => onTogglePause(player)}
+                          onClick={() => onLeaveForTheDay(player)}
                           className="p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-400 hover:text-orange-600 transition-colors"
-                          title={player.status === 'Paused' ? 'Unpause' : 'Pause'}
+                          title={
+                            player.status === 'Playing'
+                              ? 'Leave after this match'
+                              : 'Leave for the day'
+                          }
                         >
-                          {player.status === 'Paused' ? <Play size={14} /> : <Pause size={14} />}
+                          <DoorOpen size={14} />
                         </button>
                       )}
 
@@ -144,7 +152,7 @@ export function PlayersList({
                           if (confirm(`Remove ${player.name} from the system?`)) onDeactivate(player.id);
                         }}
                         className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Deactivate"
+                        title="Deactivate (remove permanently)"
                         disabled={player.status === 'Playing'}
                       >
                         <Trash2 size={14} />

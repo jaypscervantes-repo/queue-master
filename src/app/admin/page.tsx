@@ -12,6 +12,9 @@ import { Analytics } from '@/components/analytics/Analytics';
 import { PlayerModal } from '@/components/players/PlayerModal';
 import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle } from 'lucide-react';
 import { useSocket } from '@/hooks/useSocket';
 import { useQueue, useCourts, usePlayers, useMatches, useStats } from '@/hooks/useData';
 import type { Player, Gender, Rank, MatchCategory } from '@/types';
@@ -24,6 +27,7 @@ export default function AdminPage() {
   const [editPlayer, setEditPlayer] = useState<Player | null>(null);
   const [matchmakingLoading, setMatchmakingLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
 
   const { queue, loading: queueLoading, refresh: refreshQueue } = useQueue();
   const { courts, loading: courtsLoading, refresh: refreshCourts } = useCourts();
@@ -72,14 +76,40 @@ export default function AdminPage() {
 
   // Matchmaking
   const handleRunMatchmaking = async () => {
+    // Client-side pre-checks for instant feedback
+    if (queue.length === 0) {
+      setErrorDialog({
+        title: 'No Players in Queue',
+        message: 'No players are in the queue. Add players or have them scan the QR code to join.',
+      });
+      return;
+    }
+    if (queue.length < 4) {
+      setErrorDialog({
+        title: 'Not Enough Players',
+        message: `4 or more players are needed to matchmake. Currently only ${queue.length} player${queue.length === 1 ? '' : 's'} in queue.`,
+      });
+      return;
+    }
+
     setMatchmakingLoading(true);
     try {
       const res = await fetch('/api/matchmaking', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        // Server returned a specific reason (e.g. category/gender mismatch, no courts)
+        setErrorDialog({
+          title: 'Cannot Form a Match',
+          message: data.reason ?? data.error ?? 'Matchmaking failed.',
+        });
+        return;
+      }
       showToast(data.message);
     } catch (e: any) {
-      showToast(e.message ?? 'Matchmaking failed', 'error');
+      setErrorDialog({
+        title: 'Matchmaking Failed',
+        message: e?.message ?? 'An unexpected error occurred. Please try again.',
+      });
     } finally {
       setMatchmakingLoading(false);
     }
@@ -150,13 +180,22 @@ export default function AdminPage() {
     setPlayerModalOpen(true);
   };
 
-  const handleTogglePause = async (player: Player) => {
-    const newStatus = player.status === 'Paused' ? 'Offline' : 'Paused';
-    await fetch(`/api/players/${player.id}`, {
+  const handleLeaveForTheDay = async (player: Player) => {
+    const res = await fetch(`/api/players/${player.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify({ action: 'leaveForTheDay' }),
     });
+    if (!res.ok) {
+      showToast('Failed to update player', 'error');
+      return;
+    }
+    showToast(
+      player.status === 'Playing'
+        ? `${player.name} will leave after this match`
+        : `${player.name} is done for the day`
+    );
+    refreshQueue();
     refreshPlayers();
   };
 
@@ -257,8 +296,7 @@ export default function AdminPage() {
               onAddPlayer={handleAddPlayer}
               onEditPlayer={handleEditPlayer}
               onJoinQueue={handleJoinQueue}
-              onLeaveQueue={handleRemoveFromQueue}
-              onTogglePause={handleTogglePause}
+              onLeaveForTheDay={handleLeaveForTheDay}
               onDeactivate={handleDeactivate}
             />
           )}
@@ -277,6 +315,26 @@ export default function AdminPage() {
       />
 
       <QRCodeDisplay open={qrOpen} onClose={() => setQrOpen(false)} />
+
+      {/* Error dialog */}
+      <Dialog
+        open={errorDialog !== null}
+        onClose={() => setErrorDialog(null)}
+        title={errorDialog?.title ?? ''}
+        size="sm"
+      >
+        <div className="flex flex-col items-center text-center gap-4 py-2">
+          <div className="w-14 h-14 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+            <AlertTriangle size={28} className="text-orange-500" />
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            {errorDialog?.message}
+          </p>
+          <Button onClick={() => setErrorDialog(null)} className="w-full">
+            Got it
+          </Button>
+        </div>
+      </Dialog>
 
       {/* Toast */}
       {toast && (

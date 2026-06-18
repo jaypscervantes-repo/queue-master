@@ -16,6 +16,7 @@ export interface Player {
   status: PlayerStatus;
   checkInTime: string | null;
   waitingStartTime: string | null;
+  autoRequeue: boolean;
   active: boolean;
   createdAt: string;
   updatedAt: string;

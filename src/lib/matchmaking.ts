@@ -200,7 +200,14 @@ export interface MatchmakingResult {
   candidate: MatchCandidate;
 }
 
-export async function runMatchmaking(): Promise<MatchmakingResult[]> {
+export interface MatchmakingDiagnostic {
+  results: MatchmakingResult[];
+  queueCount: number;
+  availableCourtCount: number;
+  reason?: string; // populated when no matches could be formed
+}
+
+export async function runMatchmaking(): Promise<MatchmakingDiagnostic> {
   const [queueEntries, availableCourts] = await Promise.all([
     prisma.queueEntry.findMany({
       include: { player: true },
@@ -212,14 +219,34 @@ export async function runMatchmaking(): Promise<MatchmakingResult[]> {
     }),
   ]);
 
-  if (availableCourts.length === 0 || queueEntries.length < 4) return [];
+  const queueCount = queueEntries.length;
+  const availableCourtCount = availableCourts.length;
+
+  if (queueCount === 0) {
+    return { results: [], queueCount, availableCourtCount, reason: 'No players are in the queue.' };
+  }
+  if (queueCount < 4) {
+    return {
+      results: [],
+      queueCount,
+      availableCourtCount,
+      reason: `4 or more players are needed to matchmake. Currently only ${queueCount} player${queueCount === 1 ? '' : 's'} in queue.`,
+    };
+  }
+  if (availableCourtCount === 0) {
+    return {
+      results: [],
+      queueCount,
+      availableCourtCount,
+      reason: 'No courts are available. End an ongoing match or add a new court.',
+    };
+  }
 
   const allPlayers = await loadPlayerData(queueEntries as Parameters<typeof loadPlayerData>[0]);
   const results: MatchmakingResult[] = [];
   const usedIds = new Set<string>();
 
   for (const court of availableCourts) {
-    // Try each category and pick the overall best match for this court
     const candidates: MatchCandidate[] = [];
 
     for (const cat of ['MensDoubles', 'WomensDoubles', 'MixedDoubles'] as MatchCategory[]) {
@@ -229,19 +256,27 @@ export async function runMatchmaking(): Promise<MatchmakingResult[]> {
 
     if (candidates.length === 0) break;
 
-    // Pick the candidate with the lowest score
     candidates.sort((a, b) => a.score - b.score);
     const chosen = candidates[0];
 
     results.push({ courtId: court.id, candidate: chosen });
 
-    // Mark players as used so next court gets different players
     for (const p of [...chosen.team1, ...chosen.team2]) {
       usedIds.add(p.id);
     }
   }
 
-  return results;
+  if (results.length === 0) {
+    return {
+      results: [],
+      queueCount,
+      availableCourtCount,
+      reason:
+        "Could not form a valid match. Players don't share enough categories or genders for a doubles match — check that at least 4 players have a common preferred category (Men's Doubles needs 4 males, Women's needs 4 females, Mixed needs 2 of each).",
+    };
+  }
+
+  return { results, queueCount, availableCourtCount };
 }
 
 export async function executeMatches(results: MatchmakingResult[]): Promise<void> {
@@ -295,7 +330,7 @@ export async function endMatch(
 ): Promise<void> {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
-    include: { players: true },
+    include: { players: { include: { player: true } } },
   });
   if (!match) throw new Error('Match not found');
 
@@ -315,15 +350,44 @@ export async function endMatch(
       data: { status: 'Available' },
     });
 
-    // Update players: mark offline (they re-queue manually)
+    // Compute current queue length once so we can append new entries in order
+    let queuePos = await tx.queueEntry.count();
+
     for (const mp of match.players) {
-      await tx.player.update({
-        where: { id: mp.playerId },
-        data: {
-          status: 'Offline',
-          ...(mp.team === winningTeam ? { totalWins: { increment: 1 } } : {}),
-        },
-      });
+      const isWinner = mp.team === winningTeam;
+      const player = mp.player;
+
+      if (player.autoRequeue) {
+        // Auto-requeue: back into the queue at the end
+        queuePos += 1;
+        const now = new Date();
+        await tx.queueEntry.create({
+          data: {
+            playerId: mp.playerId,
+            position: queuePos,
+            queuedAt: now,
+          },
+        });
+        await tx.player.update({
+          where: { id: mp.playerId },
+          data: {
+            status: 'Queued',
+            waitingStartTime: now,
+            ...(isWinner ? { totalWins: { increment: 1 } } : {}),
+          },
+        });
+      } else {
+        // Player opted out — go Offline and reset the flag for next time
+        await tx.player.update({
+          where: { id: mp.playerId },
+          data: {
+            status: 'Offline',
+            waitingStartTime: null,
+            autoRequeue: true,
+            ...(isWinner ? { totalWins: { increment: 1 } } : {}),
+          },
+        });
+      }
     }
   });
 }

@@ -3,25 +3,32 @@ import { runMatchmaking, executeMatches } from '@/lib/matchmaking';
 
 export async function POST() {
   try {
-    const results = await runMatchmaking();
+    const diagnostic = await runMatchmaking();
 
-    if (results.length === 0) {
-      return NextResponse.json({
-        message: 'No matches could be formed. Not enough eligible players or courts.',
-        matches: [],
-      });
+    if (diagnostic.results.length === 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: diagnostic.reason ?? 'No matches could be formed.',
+          queueCount: diagnostic.queueCount,
+          availableCourtCount: diagnostic.availableCourtCount,
+          matches: [],
+        },
+        { status: 400 }
+      );
     }
 
-    await executeMatches(results);
+    await executeMatches(diagnostic.results);
 
-    global.io?.emit('match:created', { count: results.length });
+    global.io?.emit('match:created', { count: diagnostic.results.length });
     global.io?.emit('queue:update');
     global.io?.emit('court:update');
     global.io?.emit('stats:update');
 
     return NextResponse.json({
-      message: `${results.length} match(es) created successfully.`,
-      matches: results.map(r => ({
+      ok: true,
+      message: `${diagnostic.results.length} match(es) created successfully.`,
+      matches: diagnostic.results.map(r => ({
         courtId: r.courtId,
         category: r.candidate.category,
         team1: r.candidate.team1.map(p => ({ id: p.id, name: p.name, rank: p.rank })),
@@ -38,11 +45,12 @@ export async function POST() {
 // Preview matchmaking without executing
 export async function GET() {
   try {
-    const results = await runMatchmaking();
+    const diagnostic = await runMatchmaking();
 
     return NextResponse.json({
       preview: true,
-      matches: results.map(r => ({
+      reason: diagnostic.reason,
+      matches: diagnostic.results.map(r => ({
         courtId: r.courtId,
         category: r.candidate.category,
         team1: r.candidate.team1.map(p => ({ id: p.id, name: p.name, rank: p.rank, gender: p.gender })),

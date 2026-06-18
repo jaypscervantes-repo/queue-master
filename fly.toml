@@ -1,0 +1,22 @@
+app = "queue-master"
+primary_region = "sin"  # Singapore — change to your nearest: iad (US East), lhr (London), syd (Sydney), nrt (Tokyo)
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

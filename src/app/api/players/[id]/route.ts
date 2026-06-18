@@ -26,8 +26,37 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const body = await req.json();
-    const { name, gender, rank, preferredCategories, status, active } = body;
+    const { name, gender, rank, preferredCategories, status, active, action } = body;
 
+    // Special action: "leaveForTheDay"
+    // - If Playing → flag autoRequeue=false so they go Offline when match ends
+    // - If Queued → remove from queue + status=Offline + autoRequeue stays true (default for next time)
+    // - If Offline/Paused → no-op (already not playing)
+    if (action === 'leaveForTheDay') {
+      const player = await prisma.player.findUnique({ where: { id: params.id } });
+      if (!player) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+      if (player.status === 'Playing') {
+        await prisma.player.update({
+          where: { id: params.id },
+          data: { autoRequeue: false },
+        });
+      } else {
+        await prisma.queueEntry.deleteMany({ where: { playerId: params.id } });
+        await prisma.player.update({
+          where: { id: params.id },
+          data: { status: 'Offline', waitingStartTime: null, autoRequeue: true },
+        });
+      }
+
+      global.io?.emit('queue:update');
+      global.io?.emit('player:update', { playerId: params.id });
+      global.io?.emit('stats:update');
+
+      return NextResponse.json({ ok: true });
+    }
+
+    // Standard field updates
     const player = await prisma.player.update({
       where: { id: params.id },
       data: {
