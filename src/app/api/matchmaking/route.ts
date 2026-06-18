@@ -1,8 +1,23 @@
 import { NextResponse } from 'next/server';
 import { runMatchmaking, executeMatches } from '@/lib/matchmaking';
+import { prisma } from '@/lib/prisma';
+import { isSessionActive } from '@/lib/utils';
 
 export async function POST() {
   try {
+    // Block starting matches outside of an active session
+    const settings = await prisma.settings.findUnique({ where: { id: 1 } });
+    if (!isSessionActive(settings?.sessionStart, settings?.sessionEnd)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          reason:
+            'No active session. Set a session schedule (click the banner at the top of the dashboard) before starting matches. You can still add players to the queue.',
+        },
+        { status: 400 }
+      );
+    }
+
     const diagnostic = await runMatchmaking();
 
     if (diagnostic.results.length === 0) {

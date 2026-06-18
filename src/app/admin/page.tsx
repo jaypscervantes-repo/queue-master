@@ -14,11 +14,13 @@ import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay';
 import { NextUpCard } from '@/components/dashboard/NextUpCard';
 import { SessionInfo } from '@/components/dashboard/SessionInfo';
 import { SessionSettingsModal } from '@/components/dashboard/SessionSettingsModal';
+import { ActiveCourtsModal, PlayingNowModal } from '@/components/dashboard/StatDetailModals';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 import type { Settings } from '@/types';
+import { isSessionActive } from '@/lib/utils';
 import { useSocket } from '@/hooks/useSocket';
 import { useQueue, useCourts, usePlayers, useMatches, useStats } from '@/hooks/useData';
 import type { Player, Gender, Rank, MatchCategory } from '@/types';
@@ -34,6 +36,8 @@ export default function AdminPage() {
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeCourtsOpen, setActiveCourtsOpen] = useState(false);
+  const [playingNowOpen, setPlayingNowOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(0); // bumps to refresh NextUpCard
 
   const refreshSettings = async () => {
@@ -97,6 +101,16 @@ export default function AdminPage() {
 
   // Matchmaking
   const handleRunMatchmaking = async () => {
+    // Block when no active session
+    if (!isSessionActive(settings?.sessionStart, settings?.sessionEnd)) {
+      setErrorDialog({
+        title: 'No Active Session',
+        message:
+          'You can\'t start a match outside of an active session. Click the banner at the top to set a session schedule. You can still add players to the queue.',
+      });
+      return;
+    }
+
     // Client-side pre-checks for instant feedback
     if (queue.length === 0) {
       setErrorDialog({
@@ -276,7 +290,11 @@ export default function AdminPage() {
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <SessionInfo settings={settings} onEdit={() => setSettingsOpen(true)} />
 
-        <StatsCards stats={stats} />
+        <StatsCards
+          stats={stats}
+          onActiveCourtsClick={() => setActiveCourtsOpen(true)}
+          onPlayingNowClick={() => setPlayingNowOpen(true)}
+        />
 
         <NextUpCard
           courts={courts}
@@ -352,6 +370,18 @@ export default function AdminPage() {
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         onSaved={s => { setSettings(s); showToast('Schedule saved'); }}
+      />
+
+      <ActiveCourtsModal
+        open={activeCourtsOpen}
+        onClose={() => setActiveCourtsOpen(false)}
+        courts={courts}
+      />
+
+      <PlayingNowModal
+        open={playingNowOpen}
+        onClose={() => setPlayingNowOpen(false)}
+        courts={courts}
       />
 
       {/* Error dialog */}

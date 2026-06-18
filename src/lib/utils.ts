@@ -64,3 +64,14 @@ export function sortPlayersByWait(players: Player[]): Player[] {
 export function generateQueuePosition(existingCount: number): number {
   return existingCount + 1;
 }
+
+export function isSessionActive(
+  sessionStart: string | Date | null | undefined,
+  sessionEnd: string | Date | null | undefined,
+  now: Date = new Date()
+): boolean {
+  if (!sessionStart || !sessionEnd) return false;
+  const start = new Date(sessionStart);
+  const end = new Date(sessionEnd);
+  return now >= start && now <= end;
+}
