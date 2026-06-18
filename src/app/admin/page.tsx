@@ -11,10 +11,14 @@ import { PlayersList } from '@/components/players/PlayersList';
 import { Analytics } from '@/components/analytics/Analytics';
 import { PlayerModal } from '@/components/players/PlayerModal';
 import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay';
+import { NextUpCard } from '@/components/dashboard/NextUpCard';
+import { SessionInfo } from '@/components/dashboard/SessionInfo';
+import { SessionSettingsModal } from '@/components/dashboard/SessionSettingsModal';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import type { Settings } from '@/types';
 import { useSocket } from '@/hooks/useSocket';
 import { useQueue, useCourts, usePlayers, useMatches, useStats } from '@/hooks/useData';
 import type { Player, Gender, Rank, MatchCategory } from '@/types';
@@ -28,6 +32,16 @@ export default function AdminPage() {
   const [matchmakingLoading, setMatchmakingLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0); // bumps to refresh NextUpCard
+
+  const refreshSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) setSettings(await res.json());
+    } catch {}
+  };
 
   const { queue, loading: queueLoading, refresh: refreshQueue } = useQueue();
   const { courts, loading: courtsLoading, refresh: refreshCourts } = useCourts();
@@ -57,7 +71,13 @@ export default function AdminPage() {
     refreshCourts();
     refreshPlayers();
     refreshMatches(1);
+    refreshSettings();
   }, []);
+
+  // Bump preview key whenever queue/courts change so NextUpCard refreshes
+  useEffect(() => {
+    setPreviewKey(k => k + 1);
+  }, [queue.length, courts.map(c => c.status).join('|')]);
 
   // Socket.IO real-time updates
   useSocket({
@@ -67,6 +87,7 @@ export default function AdminPage() {
     'match:ended': () => { refreshCourts(); refreshPlayers(); refreshMatches(1); },
     'player:update': () => refreshPlayers(),
     'stats:update': () => { refreshQueue(); refreshCourts(); },
+    'settings:update': () => refreshSettings(),
   });
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -253,7 +274,15 @@ export default function AdminPage() {
       <Header dark={dark} onToggleDark={toggleDark} onShowQR={() => setQrOpen(true)} />
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <SessionInfo settings={settings} onEdit={() => setSettingsOpen(true)} />
+
         <StatsCards stats={stats} />
+
+        <NextUpCard
+          courts={courts}
+          avgMatchDuration={settings?.avgMatchDuration ?? 15}
+          refreshKey={previewKey}
+        />
 
         <NavTabs active={activeTab} onChange={setActiveTab} />
 
@@ -266,6 +295,8 @@ export default function AdminPage() {
               onRunMatchmaking={handleRunMatchmaking}
               onRemoveFromQueue={handleRemoveFromQueue}
               matchmakingLoading={matchmakingLoading}
+              availableCourtCount={courts.filter(c => c.status === 'Available').length}
+              avgMatchDuration={settings?.avgMatchDuration ?? 15}
             />
           )}
 
@@ -315,6 +346,13 @@ export default function AdminPage() {
       />
 
       <QRCodeDisplay open={qrOpen} onClose={() => setQrOpen(false)} />
+
+      <SessionSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onSaved={s => { setSettings(s); showToast('Schedule saved'); }}
+      />
 
       {/* Error dialog */}
       <Dialog

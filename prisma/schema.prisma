@@ -111,6 +111,16 @@ model Match {
   @@index([createdAt])
 }
 
+model Settings {
+  id               Int       @id @default(1)
+  sessionStart     DateTime?
+  sessionEnd       DateTime?
+  avgMatchDuration Int       @default(15)
+  updatedAt        DateTime  @updatedAt
+
+  @@map("settings")
+}
+
 model MatchPlayer {
   id       String @id @default(cuid())
   matchId  String

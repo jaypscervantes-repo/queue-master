@@ -102,6 +102,22 @@ export interface AnalyticsData {
   avgMatchDuration: number;
 }
 
+export interface Settings {
+  id: number;
+  sessionStart: string | null;
+  sessionEnd: string | null;
+  avgMatchDuration: number;
+  updatedAt: string;
+}
+
+export interface MatchPreview {
+  courtId: string;
+  category: MatchCategory;
+  team1: { id: string; name: string; rank: Rank; gender: Gender }[];
+  team2: { id: string; name: string; rank: Rank; gender: Gender }[];
+  score: number;
+}
+
 export type SocketEvent =
   | 'queue:update'
   | 'court:update'

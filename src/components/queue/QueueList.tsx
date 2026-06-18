@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, UserPlus, Play, RefreshCw } from 'lucide-react';
+import { Search, UserPlus, Play, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RankBadge, CategoryBadge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ interface QueueListProps {
   onRunMatchmaking: () => void;
   onRemoveFromQueue: (playerId: string) => void;
   matchmakingLoading: boolean;
+  availableCourtCount: number;
+  avgMatchDuration: number;
 }
 
 export function QueueList({
@@ -24,6 +26,8 @@ export function QueueList({
   onRunMatchmaking,
   onRemoveFromQueue,
   matchmakingLoading,
+  availableCourtCount,
+  avgMatchDuration,
 }: QueueListProps) {
   const [search, setSearch] = useState('');
   const [rankFilter, setRankFilter] = useState('');
@@ -136,6 +140,17 @@ export function QueueList({
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                     {formatWaitTime(p.waitingStartTime)}
                   </span>
+                  {availableCourtCount > 0 && avgMatchDuration > 0 && (() => {
+                    // Round 0 = currently fillable courts. Each round seats 4 × courtCount players.
+                    const round = Math.floor(idx / (4 * availableCourtCount));
+                    const mins = round * avgMatchDuration;
+                    return (
+                      <span className="inline-flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 font-medium">
+                        <Clock size={10} />
+                        {mins === 0 ? 'Ready' : `~${mins} min`}
+                      </span>
+                    );
+                  })()}
                   <span className="text-xs text-gray-400">
                     {p.gamesPlayed} games
                   </span>
