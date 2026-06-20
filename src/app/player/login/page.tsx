@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -8,7 +10,7 @@ import { Activity, LogIn } from 'lucide-react';
 export default function PlayerLoginPage() {
   const router = useRouter();
   const search = useSearchParams();
-  const nextPath = search.get('next') || '/player';
+  const nextPath = search?.get('next') || '/player';
 
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
