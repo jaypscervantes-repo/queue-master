@@ -1,6 +1,7 @@
 'use client';
 
-import { Moon, Sun, QrCode, Activity } from 'lucide-react';
+import Link from 'next/link';
+import { Moon, Sun, QrCode, Activity, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -28,6 +29,13 @@ export function Header({ dark, onToggleDark, onShowQR }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/player"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            title="Open the Player Portal"
+          >
+            <User size={13} /> Player Portal
+          </Link>
           <Button variant="outline" size="sm" onClick={onShowQR} className="hidden sm:flex">
             <QrCode size={15} />
             Join QR

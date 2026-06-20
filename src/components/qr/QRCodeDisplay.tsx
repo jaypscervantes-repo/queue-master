@@ -15,7 +15,7 @@ export function QRCodeDisplay({ open, onClose }: QRCodeDisplayProps) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setUrl(`${window.location.origin}/join`);
+      setUrl(`${window.location.origin}/player/signup`);
     }
   }, []);
 

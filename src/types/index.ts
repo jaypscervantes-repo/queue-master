@@ -18,6 +18,8 @@ export interface Player {
   waitingStartTime: string | null;
   autoRequeue: boolean;
   active: boolean;
+  username?: string | null;
+  pinHash?: string | null;
   createdAt: string;
   updatedAt: string;
   queueEntry?: QueueEntry | null;
