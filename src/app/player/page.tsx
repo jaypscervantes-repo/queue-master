@@ -13,7 +13,7 @@ import { formatWaitTime, formatMatchTime, isSessionActive } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import type { Player, Rank } from '@/types';
 
-interface PlayerStats extends Player {
+interface PlayerStats extends Omit<Player, 'matchPlayers'> {
   queuePosition: number | null;
   winRate: number;
   matchPlayers: Array<{
