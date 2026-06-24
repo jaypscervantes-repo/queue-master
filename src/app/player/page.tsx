@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Activity, Trophy, Clock, LogOut, ChevronRight, Swords, Calendar,
-  Play, DoorOpen, History, Sparkles, MapPin,
+  Play, DoorOpen, History, Sparkles, MapPin, CalendarDays, Bell, Phone, Check,
 } from 'lucide-react';
 import { RankBadge, StatusBadge, CategoryBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -41,12 +41,25 @@ interface CompletedMatch {
   opponents: { id: string; name: string; rank: Rank }[];
 }
 
-type Tab = 'overview' | 'matches';
+type Tab = 'overview' | 'schedules' | 'matches';
+
+interface AvailableSchedule {
+  id: string;
+  name: string | null;
+  courtName: string;
+  courtContact: string;
+  startTime: string;
+  endTime: string;
+  joined: boolean;
+  qmaster: { name: string; username: string };
+  _count: { queueEntries: number };
+}
 
 export default function PlayerDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matches, setMatches] = useState<CompletedMatch[]>([]);
+  const [schedules, setSchedules] = useState<AvailableSchedule[]>([]);
   const [tab, setTab] = useState<Tab>('overview');
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -66,10 +79,21 @@ export default function PlayerDashboard() {
     } catch {}
   }, []);
 
+  const refreshSchedules = useCallback(async () => {
+    try {
+      const res = await fetch('/api/schedules');
+      if (res.ok) setSchedules(await res.json());
+    } catch {}
+  }, []);
+
   useEffect(() => {
     refresh();
     refreshMatches();
-  }, [refresh, refreshMatches]);
+    refreshSchedules();
+    // Re-poll schedules every 60s to refresh the 30-min reminder
+    const t = setInterval(refreshSchedules, 60_000);
+    return () => clearInterval(t);
+  }, [refresh, refreshMatches, refreshSchedules]);
 
   // Live updates: any queue/court/match change → refresh my stats
   useSocket({
@@ -79,6 +103,7 @@ export default function PlayerDashboard() {
     'match:ended': () => { refresh(); refreshMatches(); },
     'player:update': refresh,
     'settings:update': refresh,
+    'schedule:update': refreshSchedules,
   });
 
   const showToast = (msg: string) => {
@@ -124,6 +149,31 @@ export default function PlayerDashboard() {
     router.push('/player/login');
   };
 
+  const handleJoinSchedule = async (scheduleId: string) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/player/schedules/${scheduleId}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Joined schedule');
+      } else if (data.error === 'TIME_CONFLICT') {
+        showToast(`Conflict: ${data.conflict.courtName} at the same time`);
+      } else {
+        showToast(data.error ?? 'Could not join');
+      }
+      refreshSchedules();
+    } finally { setActionLoading(false); }
+  };
+
+  const handleLeaveSchedule = async (scheduleId: string) => {
+    setActionLoading(true);
+    try {
+      await fetch(`/api/player/schedules/${scheduleId}`, { method: 'DELETE' });
+      showToast('Left schedule');
+      refreshSchedules();
+    } finally { setActionLoading(false); }
+  };
+
   if (!stats) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -131,6 +181,14 @@ export default function PlayerDashboard() {
       </div>
     );
   }
+
+  // 30-min reminder: any joined schedule starting within the next 30 minutes (and not yet started)
+  const now = new Date();
+  const reminderSchedule = schedules
+    .filter(s => s.joined)
+    .map(s => ({ s, mins: (new Date(s.startTime).getTime() - now.getTime()) / 60_000 }))
+    .filter(({ mins }) => mins > 0 && mins <= 30)
+    .sort((a, b) => a.mins - b.mins)[0];
 
   const sessionActive = isSessionActive(stats.session?.sessionStart, stats.session?.sessionEnd);
   const sessionStart = stats.session?.sessionStart ? new Date(stats.session.sessionStart) : null;
@@ -143,6 +201,21 @@ export default function PlayerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+      {/* 30-min reminder banner */}
+      {reminderSchedule && (
+        <div className="bg-orange-500 text-white px-4 py-3 flex items-center gap-3 animate-fade-in">
+          <Bell size={18} className="flex-shrink-0 animate-pulse" />
+          <div className="text-sm flex-1 min-w-0">
+            <p className="font-semibold">
+              {reminderSchedule.s.courtName} starts in {Math.round(reminderSchedule.mins)} min
+            </p>
+            <p className="text-xs text-orange-100 truncate">
+              {format(new Date(reminderSchedule.s.startTime), 'HH:mm')} · with {reminderSchedule.s.qmaster.name}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header card */}
       <div className="bg-gradient-to-br from-brand-500 to-brand-700 px-4 pt-8 pb-16 text-white relative">
         <div className="flex items-start justify-between mb-4">
@@ -287,7 +360,8 @@ export default function PlayerDashboard() {
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
           {([
             { id: 'overview', label: 'Overview', icon: Sparkles },
-            { id: 'matches', label: 'My Matches', icon: History },
+            { id: 'schedules', label: 'Schedules', icon: CalendarDays },
+            { id: 'matches', label: 'Matches', icon: History },
           ] as { id: Tab; label: string; icon: any }[]).map(t => (
             <button key={t.id}
               onClick={() => setTab(t.id)}
@@ -325,6 +399,48 @@ export default function PlayerDashboard() {
                 )}
               </div>
             </Card>
+          </>
+        )}
+
+        {tab === 'schedules' && (
+          <>
+            {schedules.length === 0 ? (
+              <Card className="p-8 text-center">
+                <CalendarDays size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No upcoming schedules</p>
+                <p className="text-xs text-gray-400 mt-1">Check back later — Q Masters post new sessions regularly</p>
+              </Card>
+            ) : (
+              <>
+                {schedules.filter(s => s.joined).length > 0 && (
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 pt-2">
+                    My Joined Schedules
+                  </p>
+                )}
+                {schedules.filter(s => s.joined).map(s => (
+                  <ScheduleListItem
+                    key={s.id} schedule={s}
+                    onJoin={handleJoinSchedule}
+                    onLeave={handleLeaveSchedule}
+                    loading={actionLoading}
+                  />
+                ))}
+
+                {schedules.filter(s => !s.joined).length > 0 && (
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 pt-3">
+                    Available Schedules
+                  </p>
+                )}
+                {schedules.filter(s => !s.joined).map(s => (
+                  <ScheduleListItem
+                    key={s.id} schedule={s}
+                    onJoin={handleJoinSchedule}
+                    onLeave={handleLeaveSchedule}
+                    loading={actionLoading}
+                  />
+                ))}
+              </>
+            )}
           </>
         )}
 
@@ -408,4 +524,63 @@ function Row({ label, value, children }: { label: string; value?: string; childr
 
 function rankLabel(r: Rank): string {
   return { A: 'Pro', B: 'Advanced', C: 'Intermediate', D: 'Beginner+', E: 'Beginner' }[r];
+}
+
+function ScheduleListItem({
+  schedule, onJoin, onLeave, loading,
+}: {
+  schedule: AvailableSchedule;
+  onJoin: (id: string) => void;
+  onLeave: (id: string) => void;
+  loading: boolean;
+}) {
+  const start = new Date(schedule.startTime);
+  const end = new Date(schedule.endTime);
+  return (
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex-1 min-w-0">
+          {schedule.name && (
+            <p className="text-xs text-gray-400">{schedule.name}</p>
+          )}
+          <p className="font-bold text-gray-900 dark:text-white flex items-center gap-2 truncate">
+            <MapPin size={14} className="text-brand-500 flex-shrink-0" />
+            {schedule.courtName}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5 ml-5">
+            <Phone size={10} /> {schedule.courtContact}
+          </p>
+        </div>
+        {schedule.joined && (
+          <span className="text-xs font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1 flex-shrink-0">
+            <Check size={12} /> JOINED
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400 mb-3 ml-5">
+        <div className="flex items-center gap-1.5"><Calendar size={11} /> {format(start, 'MMM d')}</div>
+        <div className="flex items-center gap-1.5"><Clock size={11} /> {format(start, 'HH:mm')} – {format(end, 'HH:mm')}</div>
+        <div className="flex items-center gap-1.5 col-span-2 text-gray-400">
+          by {schedule.qmaster.name} · {schedule._count.queueEntries} joined
+        </div>
+      </div>
+
+      {schedule.joined ? (
+        <button
+          onClick={() => onLeave(schedule.id)} disabled={loading}
+          className="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-sm hover:bg-gray-200 disabled:opacity-50"
+        >
+          Leave Schedule
+        </button>
+      ) : (
+        <button
+          onClick={() => onJoin(schedule.id)} disabled={loading}
+          className="w-full py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+        >
+          Join Schedule
+        </button>
+      )}
+    </Card>
+  );
 }

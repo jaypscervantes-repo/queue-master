@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, Shield, User } from 'lucide-react';
+import { Activity, Shield, User, Calendar } from 'lucide-react';
 
 export default function RootPage() {
   return (
@@ -22,6 +22,20 @@ export default function RootPage() {
             <div className="flex-1">
               <p className="font-bold">Player Portal</p>
               <p className="text-xs text-brand-100">Join the queue, view stats, see your matches</p>
+            </div>
+            <span>›</span>
+          </Link>
+
+          <Link
+            href="/qmaster"
+            className="flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 backdrop-blur rounded-2xl text-left transition-colors border border-white/20"
+          >
+            <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
+              <Calendar size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold">Q Master Portal</p>
+              <p className="text-xs text-brand-100">Create schedules, manage your queue</p>
             </div>
             <span>›</span>
           </Link>

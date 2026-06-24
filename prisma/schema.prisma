@@ -65,8 +65,62 @@ model Player {
 
   queueEntry          QueueEntry?
   matchPlayers        MatchPlayer[]
+  scheduleQueueEntries ScheduleQueueEntry[]
 
   @@map("players")
+}
+
+model QMaster {
+  id        String     @id @default(cuid())
+  name      String
+  username  String     @unique
+  pinHash   String
+  email     String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  schedules Schedule[]
+
+  @@map("qmasters")
+}
+
+model Schedule {
+  id           String   @id @default(cuid())
+  qmasterId    String
+  qmaster      QMaster  @relation(fields: [qmasterId], references: [id], onDelete: Cascade)
+
+  name         String?
+  courtName    String
+  courtContact String
+  startTime    DateTime
+  endTime      DateTime
+  cancelled    Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  queueEntries ScheduleQueueEntry[]
+
+  @@map("schedules")
+  @@index([startTime])
+  @@index([qmasterId])
+  @@index([courtName, startTime])
+}
+
+model ScheduleQueueEntry {
+  id         String   @id @default(cuid())
+  scheduleId String
+  playerId   String
+  joinedAt   DateTime @default(now())
+
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, playerId])
+  @@map("schedule_queue_entries")
+  @@index([scheduleId])
+  @@index([playerId])
 }
 
 model QueueEntry {

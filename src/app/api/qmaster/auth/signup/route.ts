@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPin, createSessionToken, setSessionCookie, isValidPin, isValidUsername } from '@/lib/auth';
-import type { Gender, Rank, MatchCategory } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, gender, rank, preferredCategories, username, pin } = body as {
+    const { name, username, pin, email } = body as {
       name: string;
-      gender: Gender;
-      rank: Rank;
-      preferredCategories: MatchCategory[];
       username: string;
       pin: string;
+      email?: string;
     };
 
-    if (!name?.trim() || !gender || !rank || !preferredCategories?.length) {
-      return NextResponse.json({ error: 'Player profile fields are required' }, { status: 400 });
+    if (!name?.trim()) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
     if (!username?.trim() || !isValidUsername(username)) {
       return NextResponse.json(
@@ -29,34 +26,29 @@ export async function POST(req: NextRequest) {
     }
 
     const u = username.toLowerCase().trim();
-    const taken = await prisma.player.findUnique({ where: { username: u } });
+    const taken = await prisma.qMaster.findUnique({ where: { username: u } });
     if (taken) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
     }
 
-    const player = await prisma.player.create({
+    const qm = await prisma.qMaster.create({
       data: {
         name: name.trim(),
-        gender,
-        rank,
-        preferredCategories,
         username: u,
         pinHash: hashPin(pin),
-        status: 'Offline',
+        email: email?.trim() || null,
         active: true,
       },
     });
 
-    setSessionCookie(createSessionToken(player.id, 'player'));
-    global.io?.emit('player:update', { playerId: player.id });
-    global.io?.emit('stats:update');
+    setSessionCookie(createSessionToken(qm.id, 'qmaster'));
 
     return NextResponse.json(
-      { ok: true, playerId: player.id, name: player.name },
+      { ok: true, qmasterId: qm.id, name: qm.name },
       { status: 201 }
     );
   } catch (error) {
-    console.error('[POST /api/auth/signup]', error);
+    console.error('[POST /api/qmaster/auth/signup]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

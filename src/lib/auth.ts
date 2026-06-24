@@ -6,24 +6,28 @@ const SECRET = process.env.AUTH_SECRET || 'dev-secret-change-in-production-2026'
 const COOKIE_NAME = 'qm_session';
 const SESSION_DAYS = 30;
 
+export type Role = 'player' | 'qmaster';
+
 function sign(data: string): string {
   return crypto.createHmac('sha256', SECRET).update(data).digest('base64url');
 }
 
-export function createSessionToken(playerId: string): string {
+export function createSessionToken(id: string, role: Role): string {
   const exp = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-  const body = Buffer.from(JSON.stringify({ playerId, exp })).toString('base64url');
+  const body = Buffer.from(JSON.stringify({ id, role, exp })).toString('base64url');
   return `${body}.${sign(body)}`;
 }
 
-export function verifySessionToken(token: string): { playerId: string } | null {
+export function verifySessionToken(token: string): { id: string; role: Role } | null {
   try {
     const [body, sig] = token.split('.');
     if (!body || !sig) return null;
     if (sign(body) !== sig) return null;
     const data = JSON.parse(Buffer.from(body, 'base64url').toString());
-    if (typeof data.playerId !== 'string' || data.exp < Date.now()) return null;
-    return { playerId: data.playerId };
+    if (typeof data.id !== 'string' || (data.role !== 'player' && data.role !== 'qmaster') || data.exp < Date.now()) {
+      return null;
+    }
+    return { id: data.id, role: data.role };
   } catch {
     return null;
   }
@@ -45,16 +49,32 @@ export function verifyPin(pin: string, stored: string): boolean {
   }
 }
 
-export function getSessionPlayerId(): string | null {
+export function getSession(): { id: string; role: Role } | null {
   const c = cookies().get(COOKIE_NAME);
   if (!c) return null;
-  return verifySessionToken(c.value)?.playerId ?? null;
+  return verifySessionToken(c.value);
+}
+
+export function getSessionPlayerId(): string | null {
+  const s = getSession();
+  return s?.role === 'player' ? s.id : null;
+}
+
+export function getSessionQMasterId(): string | null {
+  const s = getSession();
+  return s?.role === 'qmaster' ? s.id : null;
 }
 
 export async function getCurrentPlayer() {
   const id = getSessionPlayerId();
   if (!id) return null;
   return prisma.player.findUnique({ where: { id } });
+}
+
+export async function getCurrentQMaster() {
+  const id = getSessionQMasterId();
+  if (!id) return null;
+  return prisma.qMaster.findUnique({ where: { id } });
 }
 
 export function setSessionCookie(token: string) {
