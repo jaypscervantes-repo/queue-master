@@ -48,6 +48,7 @@ interface AvailableSchedule {
   name: string | null;
   courtName: string;
   courtContact: string;
+  contactPerson: string;
   startTime: string;
   endTime: string;
   joined: boolean;
@@ -547,8 +548,11 @@ function ScheduleListItem({
             <MapPin size={14} className="text-brand-500 flex-shrink-0" />
             {schedule.courtName}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5 ml-5">
-            <Phone size={10} /> {schedule.courtContact}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 space-y-0.5">
+            <span className="block">Contact: {schedule.contactPerson}</span>
+            <span className="flex items-center gap-1">
+              <Phone size={10} /> {schedule.courtContact}
+            </span>
           </p>
         </div>
         {schedule.joined && (

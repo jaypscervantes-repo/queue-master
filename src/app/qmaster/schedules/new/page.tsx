@@ -21,6 +21,7 @@ export default function NewSchedulePage() {
   const [name, setName] = useState('');
   const [courtName, setCourtName] = useState('');
   const [courtContact, setCourtContact] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
   const [startTime, setStartTime] = useState(toLocalInputValue(defaultStart));
   const [endTime, setEndTime] = useState(toLocalInputValue(defaultEnd));
   const [error, setError] = useState('');
@@ -37,6 +38,7 @@ export default function NewSchedulePage() {
           name: name.trim() || undefined,
           courtName: courtName.trim(),
           courtContact: courtContact.trim(),
+          contactPerson: contactPerson.trim(),
           startTime: new Date(startTime).toISOString(),
           endTime: new Date(endTime).toISOString(),
           confirmDuplicate,
@@ -74,6 +76,7 @@ export default function NewSchedulePage() {
       <div className="max-w-md mx-auto px-4 py-6 space-y-4">
         <Field label="Schedule Name (optional)" value={name} onChange={setName} placeholder="e.g. Friday Night Doubles" />
         <Field label="Court Name *" value={courtName} onChange={setCourtName} placeholder="e.g. Sunrise Sports Center Court 2" />
+        <Field label="Contact Person *" value={contactPerson} onChange={setContactPerson} placeholder="e.g. Coach Mike" />
         <Field label="Court Contact *" value={courtContact} onChange={setCourtContact} placeholder="Phone or email" />
 
         <div className="grid grid-cols-2 gap-3">

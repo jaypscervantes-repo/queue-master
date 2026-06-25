@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, Shield, User, Calendar } from 'lucide-react';
+import { Activity, User, Calendar } from 'lucide-react';
 
 export default function RootPage() {
   return (
@@ -40,19 +40,6 @@ export default function RootPage() {
             <span>›</span>
           </Link>
 
-          <Link
-            href="/admin"
-            className="flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 backdrop-blur rounded-2xl text-left transition-colors border border-white/20"
-          >
-            <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
-              <Shield size={20} />
-            </div>
-            <div className="flex-1">
-              <p className="font-bold">Admin Dashboard</p>
-              <p className="text-xs text-brand-100">Manage courts, players, and matchmaking</p>
-            </div>
-            <span>›</span>
-          </Link>
         </div>
       </div>
     </div>

@@ -23,18 +23,19 @@ export async function POST(req: NextRequest) {
   if (!qmId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
   const body = await req.json();
-  const { name, courtName, courtContact, startTime, endTime, confirmDuplicate } = body as {
+  const { name, courtName, courtContact, contactPerson, startTime, endTime, confirmDuplicate } = body as {
     name?: string;
     courtName: string;
     courtContact: string;
+    contactPerson: string;
     startTime: string;
     endTime: string;
     confirmDuplicate?: boolean;
   };
 
-  if (!courtName?.trim() || !courtContact?.trim() || !startTime || !endTime) {
+  if (!courtName?.trim() || !courtContact?.trim() || !contactPerson?.trim() || !startTime || !endTime) {
     return NextResponse.json(
-      { error: 'Court name, court contact, start time, and end time are required' },
+      { error: 'Court name, contact person, court contact, start time, and end time are required' },
       { status: 400 }
     );
   }
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
       name: name?.trim() || null,
       courtName: courtName.trim(),
       courtContact: courtContact.trim(),
+      contactPerson: contactPerson.trim(),
       startTime: start,
       endTime: end,
     },

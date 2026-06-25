@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (error) return error;
 
   const body = await req.json();
-  const { name, courtName, courtContact, startTime, endTime } = body;
+  const { name, courtName, courtContact, contactPerson, startTime, endTime } = body;
 
   const updated = await prisma.schedule.update({
     where: { id: params.id },
@@ -45,6 +45,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(name !== undefined ? { name: name?.trim() || null } : {}),
       ...(courtName !== undefined ? { courtName: courtName.trim() } : {}),
       ...(courtContact !== undefined ? { courtContact: courtContact.trim() } : {}),
+      ...(contactPerson !== undefined ? { contactPerson: contactPerson.trim() } : {}),
       ...(startTime !== undefined ? { startTime: new Date(startTime) } : {}),
       ...(endTime !== undefined ? { endTime: new Date(endTime) } : {}),
     },

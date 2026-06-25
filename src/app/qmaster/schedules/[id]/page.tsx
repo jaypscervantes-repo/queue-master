@@ -19,6 +19,7 @@ interface ScheduleDetail {
   name: string | null;
   courtName: string;
   courtContact: string;
+  contactPerson: string;
   startTime: string;
   endTime: string;
   queueEntries: Array<{
@@ -147,6 +148,9 @@ export default function ScheduleDetailPage() {
         </h1>
 
         <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
+          <div className="flex items-center gap-2 text-blue-100 col-span-2">
+            <Users size={13} /> {schedule.contactPerson}
+          </div>
           <div className="flex items-center gap-2 text-blue-100">
             <Phone size={13} /> {schedule.courtContact}
           </div>
