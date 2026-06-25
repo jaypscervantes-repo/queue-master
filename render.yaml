@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: npm install --include=dev && npx prisma generate && npx prisma db push --accept-data-loss && npm run build
     startCommand: npm start
-    healthCheckPath: /admin
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
