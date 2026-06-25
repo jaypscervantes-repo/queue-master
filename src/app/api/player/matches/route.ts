@@ -13,6 +13,7 @@ export async function GET() {
         match: {
           include: {
             court: true,
+            schedule: true,
             players: { include: { player: true } },
           },
         },
@@ -30,7 +31,7 @@ export async function GET() {
         startTime: mp.match.startTime,
         endTime: mp.match.endTime,
         category: mp.match.category,
-        court: mp.match.court.name,
+        court: mp.match.court?.name ?? mp.match.schedule?.courtName ?? 'Court',
         myTeam,
         won,
         lost,

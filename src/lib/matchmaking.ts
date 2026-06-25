@@ -344,11 +344,13 @@ export async function endMatch(
       },
     });
 
-    // Free the court
-    await tx.court.update({
-      where: { id: match.courtId },
-      data: { status: 'Available' },
-    });
+    // Free the court (only for global matches; schedule-scoped matches have no Court row)
+    if (match.courtId) {
+      await tx.court.update({
+        where: { id: match.courtId },
+        data: { status: 'Available' },
+      });
+    }
 
     // Compute current queue length once so we can append new entries in order
     let queuePos = await tx.queueEntry.count();
