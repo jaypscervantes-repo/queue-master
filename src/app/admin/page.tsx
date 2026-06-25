@@ -69,6 +69,13 @@ export default function AdminPage() {
     document.documentElement.classList.toggle('dark', next);
   };
 
+  // Auth check — redirect to /admin/login if not an admin
+  useEffect(() => {
+    fetch('/api/admin/auth/me').then(res => {
+      if (res.status === 401) window.location.href = '/admin/login';
+    });
+  }, []);
+
   // Initial data load
   useEffect(() => {
     refreshQueue();

@@ -101,11 +101,24 @@ model Schedule {
   updatedAt    DateTime @updatedAt
 
   queueEntries ScheduleQueueEntry[]
+  matches      Match[]
 
   @@map("schedules")
   @@index([startTime])
   @@index([qmasterId])
   @@index([courtName, startTime])
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  username  String   @unique
+  pinHash   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
 }
 
 model ScheduleQueueEntry {
@@ -149,8 +162,10 @@ model Court {
 
 model Match {
   id          String        @id @default(cuid())
-  courtId     String
-  court       Court         @relation(fields: [courtId], references: [id])
+  courtId     String?
+  court       Court?        @relation(fields: [courtId], references: [id])
+  scheduleId  String?
+  schedule    Schedule?     @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   category    MatchCategory
   status      MatchStatus   @default(Playing)
   winningTeam Int?

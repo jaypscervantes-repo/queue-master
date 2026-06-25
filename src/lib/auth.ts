@@ -6,7 +6,7 @@ const SECRET = process.env.AUTH_SECRET || 'dev-secret-change-in-production-2026'
 const COOKIE_NAME = 'qm_session';
 const SESSION_DAYS = 30;
 
-export type Role = 'player' | 'qmaster';
+export type Role = 'player' | 'qmaster' | 'admin';
 
 function sign(data: string): string {
   return crypto.createHmac('sha256', SECRET).update(data).digest('base64url');
@@ -65,6 +65,11 @@ export function getSessionQMasterId(): string | null {
   return s?.role === 'qmaster' ? s.id : null;
 }
 
+export function getSessionAdminId(): string | null {
+  const s = getSession();
+  return s?.role === 'admin' ? s.id : null;
+}
+
 export async function getCurrentPlayer() {
   const id = getSessionPlayerId();
   if (!id) return null;
@@ -75,6 +80,12 @@ export async function getCurrentQMaster() {
   const id = getSessionQMasterId();
   if (!id) return null;
   return prisma.qMaster.findUnique({ where: { id } });
+}
+
+export async function getCurrentAdmin() {
+  const id = getSessionAdminId();
+  if (!id) return null;
+  return prisma.admin.findUnique({ where: { id } });
 }
 
 export function setSessionCookie(token: string) {
