@@ -93,7 +93,7 @@ model Schedule {
   name          String?
   courtName     String
   courtContact  String
-  contactPerson String
+  contactPerson String   @default("")
   startTime     DateTime
   endTime       DateTime
   cancelled    Boolean  @default(false)
