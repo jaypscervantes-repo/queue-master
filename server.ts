@@ -41,9 +41,6 @@ global.io = io;
 
 io.on('connection', (socket) => {
   console.log(`[Socket] Client connected: ${socket.id}`);
-  socket.on('join:admin', () => {
-    socket.join('admin');
-  });
   socket.on('disconnect', (reason) => {
     console.log(`[Socket] Client disconnected: ${socket.id} (${reason})`);
   });

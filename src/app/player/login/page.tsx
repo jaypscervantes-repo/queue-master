@@ -128,7 +128,7 @@ export default function PlayerLoginPage() {
         </Suspense>
 
         <p className="text-center text-xs text-white/60 mt-4">
-          No account? Ask your club admin for help.
+          No account? Ask your Q Master for help.
         </p>
       </div>
     </div>

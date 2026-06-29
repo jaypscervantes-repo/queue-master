@@ -100,7 +100,7 @@ export default function JoinPage() {
             </div>
           )}
           <p className="text-sm text-gray-400 dark:text-gray-500">
-            Wait for the admin to call your name when a court is ready.
+            Wait for the Q Master to call your name when a court is ready.
             You'll be matched based on your rank and preferences.
           </p>
           <button

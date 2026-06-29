@@ -14,8 +14,6 @@ export function useSocket(
     const socket = getSocket();
     socketRef.current = socket;
 
-    socket.emit('join:admin');
-
     for (const [event, handler] of Object.entries(events)) {
       socket.on(event, handler);
     }
