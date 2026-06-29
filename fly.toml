@@ -1,8 +1,11 @@
+# Fly.io deployment config for Queue Master
+# Generate this app's name with `fly launch` — replace below if needed.
+
 app = "queue-master"
-primary_region = "sin"  # Singapore — change to your nearest: iad (US East), lhr (London), syd (Sydney), nrt (Tokyo)
+primary_region = "sin"  # Singapore. Change to your nearest: iad (US East), lhr (London), syd (Sydney), nrt (Tokyo), fra (Frankfurt)
 
 [build]
-  builder = "paketobuildpacks/builder:base"
+  dockerfile = "Dockerfile"
 
 [env]
   NODE_ENV = "production"
@@ -11,10 +14,15 @@ primary_region = "sin"  # Singapore — change to your nearest: iad (US East), l
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = "off"     # keep alive — no cold starts
   auto_start_machines = true
   min_machines_running = 1
   processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
 
 [[vm]]
   cpu_kind = "shared"

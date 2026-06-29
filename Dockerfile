@@ -1,39 +1,36 @@
-# Used by Fly.io. Render uses Nixpacks automatically — this file is fine to keep either way.
+# Multi-stage Dockerfile for Fly.io deployment
 
 FROM node:20-alpine AS base
-
-# Install dependencies needed by Prisma
 RUN apk add --no-cache openssl libc6-compat
-
 WORKDIR /app
 
-# Install dependencies
+# Install ALL dependencies (including dev — we need tsc, next, prisma at build time)
 FROM base AS deps
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci
 
-# Build
+# Build: generates Prisma client, builds Next.js, compiles server.ts → dist/
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
 RUN npm run build
 
-# Runtime
+# Runtime: minimal image with only what's needed to run
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/public ./public
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npm start"]
+
+# On container start: sync DB schema, then run the compiled server
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/server.js"]
