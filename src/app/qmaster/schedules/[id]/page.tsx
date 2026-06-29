@@ -270,18 +270,19 @@ export default function ScheduleDetailPage() {
         <h1 className="text-xl font-bold flex items-center gap-2">
           <MapPin size={20} /> {schedule.courtName}
         </h1>
-        <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
-          <div className="flex items-center gap-2 text-blue-100 col-span-2">
-            <Users size={13} /> {schedule.contactPerson}
+        <div className="mt-3 flex flex-col gap-1.5 text-sm text-blue-100">
+          <div className="flex items-center gap-2">
+            <Users size={13} className="flex-shrink-0" /> {schedule.contactPerson}
           </div>
-          <div className="flex items-center gap-2 text-blue-100">
-            <Phone size={13} /> {schedule.courtContact}
+          <div className="flex items-center gap-2">
+            <Phone size={13} className="flex-shrink-0" /> {schedule.courtContact}
           </div>
-          <div className="flex items-center gap-2 text-blue-100">
-            <Calendar size={13} /> {format(start, 'MMM d')}
-          </div>
-          <div className="flex items-center gap-2 text-blue-100 col-span-2">
-            <Clock size={13} /> {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
+          <div className="flex items-center gap-2">
+            <Calendar size={13} className="flex-shrink-0" />
+            {format(start, 'MMM d')}
+            <span className="text-blue-200 mx-1">·</span>
+            <Clock size={13} className="flex-shrink-0" />
+            {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
           </div>
         </div>
       </div>
