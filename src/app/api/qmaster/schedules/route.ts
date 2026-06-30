@@ -84,6 +84,10 @@ export async function POST(req: NextRequest) {
       contactPerson: contactPerson.trim(),
       startTime: start,
       endTime: end,
+      // Auto-create the first court matching the venue's courtName
+      courts: {
+        create: { name: 'Court 1' },
+      },
     },
   });
 

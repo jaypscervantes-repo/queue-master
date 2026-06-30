@@ -23,10 +23,30 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         include: { player: true },
         orderBy: { joinedAt: 'asc' },
       },
+      courts: {
+        where: { active: true },
+        include: {
+          matches: {
+            where: { status: 'Playing' },
+            include: { players: { include: { player: true } } },
+            take: 1,
+            orderBy: { startTime: 'desc' },
+          },
+        },
+        orderBy: { name: 'asc' },
+      },
     },
   });
 
-  return NextResponse.json(schedule);
+  if (!schedule) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Attach currentMatch to each court for the CourtsList component shape
+  const courtsWithMatch = schedule.courts.map(c => ({
+    ...c,
+    currentMatch: c.matches[0] ?? null,
+  }));
+
+  return NextResponse.json({ ...schedule, courts: courtsWithMatch });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

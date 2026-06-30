@@ -16,9 +16,9 @@ interface SchedulePlayer {
   recentOpponentIds: string[];
 }
 
-function rankValue(r: Rank) { return RANK_VALUES[r]; }
-function teamStrength(t: SchedulePlayer[]) { return t.reduce((s, p) => s + rankValue(p.rank), 0); }
-function waitMinutes(p: SchedulePlayer) { return (Date.now() - p.joinedAt.getTime()) / 60_000; }
+const rankValue = (r: Rank) => RANK_VALUES[r];
+const teamStrength = (t: SchedulePlayer[]) => t.reduce((s, p) => s + rankValue(p.rank), 0);
+const waitMinutes = (p: SchedulePlayer) => (Date.now() - p.joinedAt.getTime()) / 60_000;
 
 function combinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]];
@@ -51,27 +51,43 @@ function isEligible(p: SchedulePlayer, cat: MatchCategory) {
 function scoreMatch(t1: SchedulePlayer[], t2: SchedulePlayer[]): number {
   const diff = Math.abs(teamStrength(t1) - teamStrength(t2));
   let score = diff * MATCHMAKING_WEIGHTS.TEAM_DIFF;
-
   const penalizePartners = (t: SchedulePlayer[]) => {
     if (t[0].recentPartnerIds.includes(t[1].id)) score += MATCHMAKING_WEIGHTS.REPEAT_PARTNER;
     if (t[1].recentPartnerIds.includes(t[0].id)) score += MATCHMAKING_WEIGHTS.REPEAT_PARTNER;
   };
   penalizePartners(t1); penalizePartners(t2);
-
   for (const a of t1) for (const b of t2) {
     if (a.recentOpponentIds.includes(b.id)) score += MATCHMAKING_WEIGHTS.REPEAT_OPPONENT;
   }
-
   const all = [...t1, ...t2];
-  const avgWait = all.reduce((s, p) => s + waitMinutes(p), 0) / 4;
-  score -= avgWait * MATCHMAKING_WEIGHTS.WAITING_BONUS_PER_MIN;
-
-  const avgGames = all.reduce((s, p) => s + p.gamesPlayed, 0) / 4;
-  score += avgGames * MATCHMAKING_WEIGHTS.GAMES_PLAYED;
+  score -= (all.reduce((s, p) => s + waitMinutes(p), 0) / 4) * MATCHMAKING_WEIGHTS.WAITING_BONUS_PER_MIN;
+  score += (all.reduce((s, p) => s + p.gamesPlayed, 0) / 4) * MATCHMAKING_WEIGHTS.GAMES_PLAYED;
   return score;
 }
 
-// POST /api/qmaster/schedules/[id]/matchmaking — create the next match for this schedule
+function findBestForCategory(players: SchedulePlayer[], cat: MatchCategory, excludeIds: Set<string>) {
+  const eligible = players.filter(p => !excludeIds.has(p.id) && isEligible(p, cat));
+  let groups: SchedulePlayer[][];
+  if (cat === 'MixedDoubles') {
+    const m = eligible.filter(p => p.gender === 'Male');
+    const f = eligible.filter(p => p.gender === 'Female');
+    if (m.length < 2 || f.length < 2) return null;
+    groups = combinations(m, 2).flatMap(mc => combinations(f, 2).map(fc => [...mc, ...fc]));
+  } else {
+    if (eligible.length < 4) return null;
+    groups = combinations(eligible, 4);
+  }
+  let best: { t1: SchedulePlayer[]; t2: SchedulePlayer[]; score: number } | null = null;
+  for (const g of groups) {
+    for (const [t1, t2] of teamSplits(g, cat)) {
+      const s = scoreMatch(t1, t2);
+      if (!best || s < best.score) best = { t1, t2, score: s };
+    }
+  }
+  return best ? { ...best, cat } : null;
+}
+
+// POST — run matchmaking for ALL available courts in this schedule
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const qmId = getSessionQMasterId();
   if (!qmId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -80,7 +96,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   if (!schedule) return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
   if (schedule.qmasterId !== qmId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Session active check
   const now = new Date();
   if (now < schedule.startTime || now > schedule.endTime) {
     return NextResponse.json(
@@ -89,18 +104,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     );
   }
 
-  // Only one active match per schedule at a time
-  const activeMatch = await prisma.match.findFirst({
-    where: { scheduleId: schedule.id, status: 'Playing' },
+  const availableCourts = await prisma.court.findMany({
+    where: { scheduleId: schedule.id, status: 'Available', active: true },
+    orderBy: { name: 'asc' },
   });
-  if (activeMatch) {
+  if (availableCourts.length === 0) {
     return NextResponse.json(
-      { error: 'A match is already in progress on this court. End it first.' },
-      { status: 409 }
+      { error: 'No available courts. End an active match or add a court first.' },
+      { status: 400 }
     );
   }
 
-  // Load eligible players from this schedule's queue (must not be currently Playing in any other match)
   const entries = await prisma.scheduleQueueEntry.findMany({
     where: { scheduleId: schedule.id, player: { status: { not: 'Playing' } } },
     include: { player: true },
@@ -114,7 +128,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     );
   }
 
-  // Load recent partners/opponents for each player (from prior matches in this schedule)
+  // Build SchedulePlayer objects with recent partner/opponent history
   const players: SchedulePlayer[] = [];
   for (const e of entries) {
     const recent = await prisma.matchPlayer.findMany({
@@ -131,117 +145,122 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       }
     }
     players.push({
-      id: e.playerId,
-      name: e.player.name,
-      rank: e.player.rank as Rank,
-      gender: e.player.gender as Gender,
+      id: e.playerId, name: e.player.name,
+      rank: e.player.rank as Rank, gender: e.player.gender as Gender,
       preferredCategories: Array.isArray(e.player.preferredCategories)
         ? (e.player.preferredCategories as MatchCategory[]) : [],
-      gamesPlayed: e.player.gamesPlayed,
-      joinedAt: e.joinedAt,
-      recentPartnerIds: partners,
-      recentOpponentIds: opponents,
+      gamesPlayed: e.player.gamesPlayed, joinedAt: e.joinedAt,
+      recentPartnerIds: partners, recentOpponentIds: opponents,
     });
   }
 
-  // Find best match across all categories
-  let best: { t1: SchedulePlayer[]; t2: SchedulePlayer[]; cat: MatchCategory; score: number } | null = null;
+  // For each available court, pick the best match (and reserve those players)
+  const created: { courtId: string; courtName: string; matchId: string; category: MatchCategory; t1: SchedulePlayer[]; t2: SchedulePlayer[] }[] = [];
+  const usedIds = new Set<string>();
 
-  for (const cat of ['MensDoubles', 'WomensDoubles', 'MixedDoubles'] as MatchCategory[]) {
-    const eligible = players.filter(p => isEligible(p, cat));
-    let groups: SchedulePlayer[][];
-    if (cat === 'MixedDoubles') {
-      const m = eligible.filter(p => p.gender === 'Male');
-      const f = eligible.filter(p => p.gender === 'Female');
-      if (m.length < 2 || f.length < 2) continue;
-      groups = combinations(m, 2).flatMap(mc => combinations(f, 2).map(fc => [...mc, ...fc]));
-    } else {
-      if (eligible.length < 4) continue;
-      groups = combinations(eligible, 4);
+  for (const court of availableCourts) {
+    const candidates: { t1: SchedulePlayer[]; t2: SchedulePlayer[]; cat: MatchCategory; score: number }[] = [];
+    for (const cat of ['MensDoubles', 'WomensDoubles', 'MixedDoubles'] as MatchCategory[]) {
+      const c = findBestForCategory(players, cat, usedIds);
+      if (c) candidates.push(c);
     }
-    for (const g of groups) {
-      for (const [t1, t2] of teamSplits(g, cat)) {
-        const s = scoreMatch(t1, t2);
-        if (!best || s < best.score) best = { t1, t2, cat, score: s };
+    if (candidates.length === 0) break;
+
+    candidates.sort((a, b) => a.score - b.score);
+    const chosen = candidates[0];
+
+    const match = await prisma.$transaction(async tx => {
+      const m = await tx.match.create({
+        data: {
+          scheduleId: schedule.id,
+          courtId: court.id,
+          category: chosen.cat,
+          status: 'Playing',
+          players: {
+            create: [
+              { playerId: chosen.t1[0].id, team: 1 },
+              { playerId: chosen.t1[1].id, team: 1 },
+              { playerId: chosen.t2[0].id, team: 2 },
+              { playerId: chosen.t2[1].id, team: 2 },
+            ],
+          },
+        },
+      });
+      await tx.court.update({ where: { id: court.id }, data: { status: 'Occupied' } });
+      for (const p of [...chosen.t1, ...chosen.t2]) {
+        await tx.player.update({
+          where: { id: p.id },
+          data: { status: 'Playing', gamesPlayed: { increment: 1 }, waitingStartTime: null },
+        });
       }
-    }
+      return m;
+    });
+
+    created.push({
+      courtId: court.id, courtName: court.name, matchId: match.id,
+      category: chosen.cat, t1: chosen.t1, t2: chosen.t2,
+    });
+
+    for (const p of [...chosen.t1, ...chosen.t2]) usedIds.add(p.id);
   }
 
-  if (!best) {
+  if (created.length === 0) {
     return NextResponse.json(
       { error: 'Could not form a valid match. Players don\'t share a common category or gender mix.' },
       { status: 400 }
     );
   }
 
-  // Create the match
-  const allPlayers = [...best.t1, ...best.t2];
-  const match = await prisma.$transaction(async tx => {
-    const m = await tx.match.create({
-      data: {
-        scheduleId: schedule.id,
-        category: best!.cat,
-        status: 'Playing',
-        players: {
-          create: [
-            { playerId: best!.t1[0].id, team: 1 },
-            { playerId: best!.t1[1].id, team: 1 },
-            { playerId: best!.t2[0].id, team: 2 },
-            { playerId: best!.t2[1].id, team: 2 },
-          ],
-        },
-      },
-    });
-    for (const p of allPlayers) {
-      await tx.player.update({
-        where: { id: p.id },
-        data: { status: 'Playing', gamesPlayed: { increment: 1 }, waitingStartTime: null },
-      });
-    }
-    return m;
-  });
-
   global.io?.emit('schedule:update');
   global.io?.emit('match:created');
 
   return NextResponse.json({
     ok: true,
-    match,
-    team1: best.t1.map(p => ({ id: p.id, name: p.name, rank: p.rank })),
-    team2: best.t2.map(p => ({ id: p.id, name: p.name, rank: p.rank })),
-    category: best.cat,
+    matches: created.map(c => ({
+      courtId: c.courtId, courtName: c.courtName, matchId: c.matchId, category: c.category,
+      team1: c.t1.map(p => ({ id: p.id, name: p.name, rank: p.rank })),
+      team2: c.t2.map(p => ({ id: p.id, name: p.name, rank: p.rank })),
+    })),
   }, { status: 201 });
 }
 
-// PUT — end the current active match for this schedule
+// PUT — end a specific match (or any active one if not specified)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const qmId = getSessionQMasterId();
   if (!qmId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
   const body = await req.json();
-  const winningTeam: number | null = body?.winningTeam ?? null;
+  const { matchId, winningTeam } = body as { matchId?: string; winningTeam?: number | null };
 
   const schedule = await prisma.schedule.findUnique({ where: { id: params.id } });
   if (!schedule) return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
   if (schedule.qmasterId !== qmId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const match = await prisma.match.findFirst({
-    where: { scheduleId: schedule.id, status: 'Playing' },
-    include: { players: true },
-  });
-  if (!match) return NextResponse.json({ error: 'No active match on this schedule' }, { status: 404 });
+  const match = matchId
+    ? await prisma.match.findUnique({ where: { id: matchId }, include: { players: true } })
+    : await prisma.match.findFirst({
+        where: { scheduleId: schedule.id, status: 'Playing' },
+        include: { players: true },
+      });
+
+  if (!match || match.scheduleId !== schedule.id) {
+    return NextResponse.json({ error: 'Match not found in this schedule' }, { status: 404 });
+  }
 
   await prisma.$transaction(async tx => {
     await tx.match.update({
       where: { id: match.id },
-      data: { status: 'Completed', winningTeam, endTime: new Date() },
+      data: { status: 'Completed', winningTeam: winningTeam ?? null, endTime: new Date() },
     });
+    if (match.courtId) {
+      await tx.court.update({ where: { id: match.courtId }, data: { status: 'Available' } });
+    }
     for (const mp of match.players) {
       const isWinner = mp.team === winningTeam;
       await tx.player.update({
         where: { id: mp.playerId },
         data: {
-          status: 'Offline', // player can re-join schedule queue if they want another game
+          status: 'Offline',
           waitingStartTime: null,
           ...(isWinner ? { totalWins: { increment: 1 } } : {}),
         },

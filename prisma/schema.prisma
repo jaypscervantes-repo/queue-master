@@ -103,6 +103,7 @@ model Schedule {
 
   queueEntries ScheduleQueueEntry[]
   matches      Match[]
+  courts       Court[]
 
   @@map("schedules")
   @@index([startTime])
@@ -137,16 +138,20 @@ model QueueEntry {
 }
 
 model Court {
-  id        String      @id @default(cuid())
-  name      String      @unique
-  status    CourtStatus @default(Available)
-  active    Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id         String      @id @default(cuid())
+  scheduleId String?
+  schedule   Schedule?   @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  name       String
+  status     CourtStatus @default(Available)
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
-  matches   Match[]
+  matches    Match[]
 
+  @@unique([scheduleId, name])
   @@map("courts")
+  @@index([scheduleId])
 }
 
 model Match {
