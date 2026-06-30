@@ -81,15 +81,15 @@ export default function NewSchedulePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="bg-gradient-to-br from-blue-500 to-blue-700 px-4 pt-6 pb-8 text-white">
-        <Link href="/qmaster" className="inline-flex items-center gap-2 text-blue-100 text-sm mb-3 hover:text-white">
+      <div className="bg-gradient-to-br from-navy-700 to-navy-900 px-4 pt-6 pb-8 text-white">
+        <Link href="/qmaster" className="inline-flex items-center gap-2 text-navy-200 text-sm mb-3 hover:text-white">
           <ArrowLeft size={14} /> Back
         </Link>
         <div className="flex items-center gap-2">
           <Calendar size={22} />
           <h1 className="text-xl font-bold">New Schedule</h1>
         </div>
-        <p className="text-blue-100 text-sm mt-1">Reserve your court first, then add it here.</p>
+        <p className="text-navy-200 text-sm mt-1">Reserve your court first, then add it here.</p>
       </div>
 
       <div className="max-w-md mx-auto px-4 py-6 space-y-4">
@@ -103,14 +103,14 @@ export default function NewSchedulePage() {
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Start *</label>
             <input
               type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
             />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">End *</label>
             <input
               type="datetime-local" value={endTime} onChange={e => setEndTime(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
             />
           </div>
         </div>
@@ -121,9 +121,9 @@ export default function NewSchedulePage() {
             <input
               type="checkbox" checked={recurring}
               onChange={e => setRecurring(e.target.checked)}
-              className="w-5 h-5 accent-blue-500"
+              className="w-5 h-5 accent-navy-700"
             />
-            <Repeat size={16} className="text-blue-500" />
+            <Repeat size={16} className="text-navy-700" />
             <span className="font-semibold text-gray-800 dark:text-gray-200">
               Make this a recurring schedule
             </span>
@@ -141,7 +141,7 @@ export default function NewSchedulePage() {
                         key={idx} type="button" onClick={() => toggleWeekday(idx)}
                         className={`py-2 rounded-lg text-xs font-bold border-2 transition-all ${
                           active
-                            ? 'border-blue-500 bg-blue-500 text-white'
+                            ? 'border-navy-700 bg-navy-700 text-white'
                             : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
                         }`}
                       >
@@ -164,7 +164,7 @@ export default function NewSchedulePage() {
                 <input
                   type="date" value={untilDate}
                   onChange={e => setUntilDate(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   Creates one schedule per matching day from now until this date.
@@ -182,7 +182,7 @@ export default function NewSchedulePage() {
 
         <button
           onClick={() => submit(false)} disabled={loading}
-          className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+          className="w-full py-3.5 bg-navy-700 hover:bg-navy-800 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
         >
           {loading
             ? 'Creating...'
@@ -230,7 +230,7 @@ function Field({ label, value, onChange, placeholder }: { label: string; value: 
       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{label}</label>
       <input
         type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+        className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
       />
     </div>
   );

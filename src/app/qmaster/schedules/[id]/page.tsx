@@ -167,7 +167,7 @@ export default function ScheduleDetailPage() {
   if (loading || !schedule) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-navy-700 border-t-transparent" />
       </div>
     );
   }
@@ -207,20 +207,20 @@ export default function ScheduleDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       {/* Schedule header */}
-      <div className="bg-gradient-to-br from-blue-500 to-blue-700 px-4 pt-6 pb-12 text-white">
-        <Link href="/qmaster" className="inline-flex items-center gap-2 text-blue-100 text-sm mb-3 hover:text-white">
+      <div className="bg-gradient-to-br from-navy-700 to-navy-900 px-4 pt-6 pb-12 text-white">
+        <Link href="/qmaster" className="inline-flex items-center gap-2 text-navy-200 text-sm mb-3 hover:text-white">
           <ArrowLeft size={14} /> Back to schedules
         </Link>
-        {schedule.name && <p className="text-xs text-blue-100 mb-1">{schedule.name}</p>}
+        {schedule.name && <p className="text-xs text-navy-200 mb-1">{schedule.name}</p>}
         <h1 className="text-xl font-bold flex items-center gap-2">
           <MapPin size={20} /> {schedule.courtName}
         </h1>
-        <div className="mt-3 flex flex-col gap-1.5 text-sm text-blue-100">
+        <div className="mt-3 flex flex-col gap-1.5 text-sm text-navy-200">
           <div className="flex items-center gap-2"><Users size={13} className="flex-shrink-0" /> {schedule.contactPerson}</div>
           <div className="flex items-center gap-2"><Phone size={13} className="flex-shrink-0" /> {schedule.courtContact}</div>
           <div className="flex items-center gap-2">
             <Calendar size={13} className="flex-shrink-0" /> {format(start, 'MMM d')}
-            <span className="text-blue-200 mx-1">·</span>
+            <span className="text-navy-300 mx-1">·</span>
             <Clock size={13} className="flex-shrink-0" /> {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
           </div>
         </div>

@@ -30,14 +30,14 @@ export default function QMasterLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-navy-700 via-navy-800 to-navy-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6 text-white">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 backdrop-blur">
             <Shield size={28} />
           </div>
           <h1 className="text-2xl font-bold">Q Master</h1>
-          <p className="text-blue-100 text-sm mt-1">Organizer Login</p>
+          <p className="text-navy-200 text-sm mt-1">Organizer Login</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl space-y-5">
@@ -47,7 +47,7 @@ export default function QMasterLoginPage() {
               type="text" autoComplete="username" value={username}
               onChange={e => setUsername(e.target.value)}
               placeholder="your_username"
-              className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-navy-700"
             />
           </div>
 
@@ -59,7 +59,7 @@ export default function QMasterLoginPage() {
               onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              className="w-full px-4 py-3 text-2xl tracking-[0.5em] text-center rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 text-2xl tracking-[0.5em] text-center rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-navy-700"
             />
           </div>
 
@@ -71,14 +71,14 @@ export default function QMasterLoginPage() {
 
           <button
             onClick={handleLogin} disabled={loading}
-            className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50"
+            className="w-full py-3.5 bg-navy-700 hover:bg-navy-800 active:bg-navy-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50"
           >
             <LogIn size={18} /> {loading ? 'Logging in...' : 'Log In'}
           </button>
 
           <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             New organizer?{' '}
-            <Link href="/qmaster/signup" className="text-blue-500 hover:text-blue-600 font-semibold">
+            <Link href="/qmaster/signup" className="text-navy-700 hover:text-navy-800 font-semibold">
               Sign up
             </Link>
           </div>

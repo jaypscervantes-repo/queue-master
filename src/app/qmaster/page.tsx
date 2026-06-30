@@ -66,7 +66,7 @@ export default function QMasterDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-navy-700 border-t-transparent" />
       </div>
     );
   }
@@ -78,14 +78,14 @@ export default function QMasterDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-blue-500 to-blue-700 px-4 pt-8 pb-16 text-white">
+      <div className="bg-gradient-to-br from-navy-700 to-navy-900 px-4 pt-8 pb-16 text-white">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
               <Shield size={20} />
             </div>
             <div>
-              <p className="text-xs text-blue-100">Q Master</p>
+              <p className="text-xs text-navy-200">Q Master</p>
               <p className="font-bold text-base leading-tight">{me?.name}</p>
             </div>
           </div>
@@ -97,11 +97,11 @@ export default function QMasterDashboard() {
         <div className="flex items-center justify-between mt-6">
           <div>
             <p className="text-3xl font-bold">{upcoming.length}</p>
-            <p className="text-xs text-blue-100">Upcoming Schedules</p>
+            <p className="text-xs text-navy-200">Upcoming Schedules</p>
           </div>
           <Link
             href="/qmaster/schedules/new"
-            className="flex items-center gap-2 bg-white text-blue-600 font-bold px-4 py-2.5 rounded-xl shadow-lg hover:scale-105 transition-transform"
+            className="flex items-center gap-2 bg-white text-navy-800 font-bold px-4 py-2.5 rounded-xl shadow-lg hover:scale-105 transition-transform"
           >
             <Plus size={16} /> New Schedule
           </Link>
@@ -117,7 +117,7 @@ export default function QMasterDashboard() {
             <p className="text-sm text-gray-400 mt-1">Create one to get started</p>
             <Link
               href="/qmaster/schedules/new"
-              className="inline-flex items-center gap-2 mt-4 bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-xl"
+              className="inline-flex items-center gap-2 mt-4 bg-navy-700 text-white font-semibold px-4 py-2.5 rounded-xl"
             >
               <Plus size={14} /> Create Schedule
             </Link>
@@ -157,14 +157,14 @@ function ScheduleCard({
 
   return (
     <Link href={`/qmaster/schedules/${schedule.id}`} className={`block ${past ? 'opacity-60' : ''}`}>
-    <Card className="p-4 cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all">
+    <Card className="p-4 cursor-pointer hover:border-navy-300 dark:hover:border-navy-900 hover:shadow-md transition-all">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           {schedule.name && (
             <p className="text-xs text-gray-400 mb-0.5">{schedule.name}</p>
           )}
           <p className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <MapPin size={14} className="text-blue-500" />
+            <MapPin size={14} className="text-navy-700" />
             {schedule.courtName}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5">

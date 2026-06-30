@@ -36,13 +36,13 @@ export default function QMasterSignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800">
+    <div className="min-h-screen bg-gradient-to-br from-navy-700 via-navy-800 to-navy-950">
       <div className="px-4 pt-8 pb-6 text-center text-white">
         <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 backdrop-blur">
           <Shield size={24} />
         </div>
         <h1 className="text-2xl font-bold">Become a Q Master</h1>
-        <p className="text-blue-100 text-sm mt-1">Organize sessions and manage queues</p>
+        <p className="text-navy-200 text-sm mt-1">Organize sessions and manage queues</p>
       </div>
 
       <div className="bg-gray-50 dark:bg-gray-900 rounded-t-3xl px-4 pt-6 pb-8 min-h-[calc(100vh-180px)]">
@@ -57,7 +57,7 @@ export default function QMasterSignupPage() {
               type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6}
               value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
-              className="w-full px-4 py-3 text-2xl tracking-[0.5em] text-center rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 text-2xl tracking-[0.5em] text-center rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
             />
           </div>
 
@@ -68,7 +68,7 @@ export default function QMasterSignupPage() {
               value={pin2} onChange={e => setPin2(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => e.key === 'Enter' && handleSignup()}
               placeholder="••••"
-              className="w-full px-4 py-3 text-2xl tracking-[0.5em] text-center rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 text-2xl tracking-[0.5em] text-center rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
             />
           </div>
 
@@ -80,13 +80,13 @@ export default function QMasterSignupPage() {
 
           <button
             onClick={handleSignup} disabled={loading}
-            className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+            className="w-full py-4 bg-navy-700 hover:bg-navy-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
           >
             <UserPlus size={18} /> {loading ? 'Creating account...' : 'Create Q Master Account'}
           </button>
 
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 pt-2">
-            Already have an account? <Link href="/qmaster/login" className="text-blue-500 hover:text-blue-600 font-semibold">Log in</Link>
+            Already have an account? <Link href="/qmaster/login" className="text-navy-700 hover:text-navy-800 font-semibold">Log in</Link>
           </p>
         </div>
       </div>
@@ -107,7 +107,7 @@ function Field({ label, value, onChange, placeholder, hint, type = 'text' }: {
       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{label}</label>
       <input
         type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-blue-500"
+        className="w-full px-4 py-3 text-base rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:border-navy-700"
       />
       {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
     </div>

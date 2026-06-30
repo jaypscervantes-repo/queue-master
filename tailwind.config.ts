@@ -23,6 +23,26 @@ const config: Config = {
           900: '#14532d',
           950: '#052e16',
         },
+        navy: {
+          50:  '#E8ECF7',
+          100: '#C3CCE5',
+          200: '#9EACD3',
+          300: '#788CC1',
+          400: '#5371B1',
+          500: '#2E599E',
+          600: '#1F4280',
+          700: '#142C57',
+          800: '#0A1F4A',  // primary — matches the launcher icon background
+          900: '#061635',
+          950: '#020C20',
+        },
+        neon: {
+          300: '#E3F86B',
+          400: '#D8FA3F',
+          500: '#C7F02D',  // primary lime — matches icon accents
+          600: '#A8E830',
+          700: '#85C022',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

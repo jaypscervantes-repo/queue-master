@@ -1,46 +1,63 @@
 import Link from 'next/link';
-import { Activity, User, Calendar } from 'lucide-react';
+import { User, Calendar } from 'lucide-react';
 
 export default function RootPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md text-center text-white">
-        <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 backdrop-blur">
-          <Activity size={32} />
-        </div>
-        <h1 className="text-3xl font-bold">Queue Master</h1>
-        <p className="text-brand-100 mt-1 mb-8">Badminton matchmaking made simple</p>
+    <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-950 flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Subtle neon glow accents */}
+      <div className="absolute top-1/4 -left-20 w-72 h-72 bg-neon-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-navy-500/20 rounded-full blur-3xl pointer-events-none" />
 
+      <div className="relative w-full max-w-md text-center text-white">
+        {/* Stylized title — matches the icon */}
+        <div className="mb-12">
+          <h1 className="text-6xl sm:text-7xl font-black tracking-tight leading-none">
+            <span className="text-white">QUEUE</span>
+          </h1>
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <span className="h-0.5 w-8 bg-neon-500" />
+            <span className="text-2xl sm:text-3xl font-bold tracking-[0.3em] text-neon-500">
+              MASTER
+            </span>
+            <span className="h-0.5 w-8 bg-neon-500" />
+          </div>
+          <p className="text-navy-200 text-sm mt-5">Badminton matchmaking made simple</p>
+        </div>
+
+        {/* Portal buttons */}
         <div className="space-y-3">
           <Link
             href="/player"
-            className="flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 backdrop-blur rounded-2xl text-left transition-colors border border-white/20"
+            className="group flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-2xl text-left transition-all border border-white/10 hover:border-neon-500/40 hover:shadow-lg hover:shadow-neon-500/10"
           >
-            <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
-              <User size={20} />
+            <div className="w-11 h-11 bg-neon-500/10 group-hover:bg-neon-500/20 rounded-xl flex items-center justify-center transition-colors">
+              <User size={20} className="text-neon-400" />
             </div>
             <div className="flex-1">
-              <p className="font-bold">Player Portal</p>
-              <p className="text-xs text-brand-100">Join the queue, view stats, see your matches</p>
+              <p className="font-bold text-white">Player Portal</p>
+              <p className="text-xs text-navy-200">Join the queue, view stats, see your matches</p>
             </div>
-            <span>›</span>
+            <span className="text-navy-300 group-hover:text-neon-400 group-hover:translate-x-0.5 transition-all">›</span>
           </Link>
 
           <Link
             href="/qmaster"
-            className="flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 backdrop-blur rounded-2xl text-left transition-colors border border-white/20"
+            className="group flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-2xl text-left transition-all border border-white/10 hover:border-neon-500/40 hover:shadow-lg hover:shadow-neon-500/10"
           >
-            <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
-              <Calendar size={20} />
+            <div className="w-11 h-11 bg-neon-500/10 group-hover:bg-neon-500/20 rounded-xl flex items-center justify-center transition-colors">
+              <Calendar size={20} className="text-neon-400" />
             </div>
             <div className="flex-1">
-              <p className="font-bold">Q Master Portal</p>
-              <p className="text-xs text-brand-100">Create schedules, manage your queue</p>
+              <p className="font-bold text-white">Q Master Portal</p>
+              <p className="text-xs text-navy-200">Create schedules, manage your queue</p>
             </div>
-            <span>›</span>
+            <span className="text-navy-300 group-hover:text-neon-400 group-hover:translate-x-0.5 transition-all">›</span>
           </Link>
-
         </div>
+
+        <p className="mt-12 text-xs text-navy-300">
+          Badminton · Pickleball · Doubles matchmaking
+        </p>
       </div>
     </div>
   );
