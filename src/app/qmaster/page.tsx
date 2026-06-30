@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Shield, Plus, Calendar, MapPin, Phone, Users, LogOut, Clock,
-  Edit2, Trash2,
+  Trash2, Repeat,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { format, isAfter, isBefore } from 'date-fns';
@@ -19,6 +19,7 @@ interface ScheduleSummary {
   contactPerson: string;
   startTime: string;
   endTime: string;
+  recurrenceGroupId: string | null;
   _count: { queueEntries: number };
 }
 
@@ -155,7 +156,8 @@ function ScheduleCard({
   const isLive = isAfter(now, start) && isBefore(now, end);
 
   return (
-    <Card className={`p-4 ${past ? 'opacity-60' : ''}`}>
+    <Link href={`/qmaster/schedules/${schedule.id}`} className={`block ${past ? 'opacity-60' : ''}`}>
+    <Card className="p-4 cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           {schedule.name && (
@@ -174,11 +176,18 @@ function ScheduleCard({
             </span>
           </p>
         </div>
-        {isLive && (
-          <span className="text-xs font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" /> LIVE
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {isLive && (
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" /> LIVE
+            </span>
+          )}
+          {schedule.recurrenceGroupId && (
+            <span className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1" title="Part of a recurring series">
+              <Repeat size={11} /> Recurring
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-sm mb-3">
@@ -198,15 +207,8 @@ function ScheduleCard({
           {schedule._count.queueEntries} player{schedule._count.queueEntries !== 1 ? 's' : ''} joined
         </span>
         <div className="flex gap-1">
-          <Link
-            href={`/qmaster/schedules/${schedule.id}`}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-colors"
-            title="View / edit"
-          >
-            <Edit2 size={14} />
-          </Link>
           <button
-            onClick={onDelete}
+            onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
             className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
             title="Delete"
           >
@@ -215,5 +217,6 @@ function ScheduleCard({
         </div>
       </div>
     </Card>
+    </Link>
   );
 }
